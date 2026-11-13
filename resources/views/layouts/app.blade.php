@@ -18,6 +18,22 @@
                 </form>
             </div>
         </nav>
+                <div class="bg-white border-bottom">
+            <ul class="nav container">
+                <li class="nav-item"><a class="nav-link" href="{{ route('inicio') }}">Inicio</a></li>
+                @if (auth()->user()->esAdministrador())
+                    <li class="nav-item"><a class="nav-link" href="{{ route('usuarios.index') }}">Usuarios</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('responsables.index') }}">Responsables</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('items.index') }}">Ítems</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('registros.index') }}">Registros activos</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('liquidaciones.index') }}">Finalizar horas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('reportes.index') }}">Reportes</a></li>
+                @else
+                    <li class="nav-item"><a class="nav-link" href="{{ route('mis-registros.index') }}">Mis horas activas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('mis-reportes.index') }}">Mis reportes</a></li>
+                @endif
+            </ul>
+        </div>
     @endauth
 
     <main class="container py-4">

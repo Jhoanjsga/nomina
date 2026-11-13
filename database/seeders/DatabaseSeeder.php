@@ -25,5 +25,14 @@ class DatabaseSeeder extends Seeder
             'tipo' => 'savio',
             'activo' => true,
         ]);
+                Usuario::create([
+            'nombre' => 'Dependiente de prueba',
+            'cedula' => '2000000000',
+            'correo' => 'dependiente@savio.test',
+            'telefono' => '3000000001',
+            'contrasena' => 'Cambiar123*',
+            'rol' => 'dependiente',
+            'activo' => true,
+        ]);
     }
 }

@@ -45,4 +45,13 @@ class Usuario extends Authenticatable
     {
         return $this->hasMany(Liquidacion::class);
     }
+        public function esAdministrador(): bool
+    {
+        return $this->rol === 'administrador';
+    }
+
+    public function esDependiente(): bool
+    {
+        return $this->rol === 'dependiente';
+    }
 }
