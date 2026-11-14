@@ -45,7 +45,19 @@ class Usuario extends Authenticatable
     {
         return $this->hasMany(Liquidacion::class);
     }
-        public function esAdministrador(): bool
+    // Valor de la hora que rige hoy: el último con vigente_desde menor o igual a hoy.
+    // Usa la relación ya cargada para no consultar la base por cada usuario de la lista.
+    public function valorHoraActual(): ?ValorHora
+    {
+        $hoy = today()->toDateString();
+
+        return $this->valoresHora
+            ->filter(fn ($valor) => $valor->vigente_desde->toDateString() <= $hoy)
+            ->sortByDesc('vigente_desde')
+            ->first();
+    }
+
+    public function esAdministrador(): bool
     {
         return $this->rol === 'administrador';
     }

@@ -65,7 +65,8 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    // Hora de Colombia: las reglas de fechas (ayer, hoy, día hábil) dependen de ella.
+    'timezone' => 'America/Bogota',
 
     /*
     |--------------------------------------------------------------------------

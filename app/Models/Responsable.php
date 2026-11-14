@@ -16,4 +16,16 @@ class Responsable extends Model
     {
         return $this->hasMany(RegistroHora::class);
     }
+
+    // Savio es el responsable fijo de la firma: siempre debe estar disponible.
+    public function esSavio(): bool
+    {
+        return $this->tipo === 'savio';
+    }
+
+    // Uso: Responsable::activos()->get()
+    public function scopeActivos($consulta)
+    {
+        return $consulta->where('activo', true);
+    }
 }

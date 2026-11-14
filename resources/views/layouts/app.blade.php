@@ -25,8 +25,6 @@
                     <li class="nav-item"><a class="nav-link" href="{{ route('usuarios.index') }}">Usuarios</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('responsables.index') }}">Responsables</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('items.index') }}">Ítems</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ route('registros.index') }}">Registros activos</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{{ route('liquidaciones.index') }}">Finalizar horas</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('reportes.index') }}">Reportes</a></li>
                 @else
                     <li class="nav-item"><a class="nav-link" href="{{ route('mis-registros.index') }}">Mis horas activas</a></li>
@@ -37,6 +35,14 @@
     @endauth
 
     <main class="container py-4">
+        {{-- Mensajes que envían los controladores con ->with('exito') o ->with('error') --}}
+        @if (session('exito'))
+            <div class="alert alert-success">{{ session('exito') }}</div>
+        @endif
+        @if (session('error'))
+            <div class="alert alert-danger">{{ session('error') }}</div>
+        @endif
+
         @yield('contenido')
     </main>
 </body>

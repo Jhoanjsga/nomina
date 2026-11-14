@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware) {
        $middleware->alias([
             'rol' => \App\Http\Middleware\VerificarRol::class,
+            'activo' => \App\Http\Middleware\VerificarActivo::class,
         ]);
         $middleware->web(append: [
             \App\Http\Middleware\SinCache::class,

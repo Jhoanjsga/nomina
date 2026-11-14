@@ -16,4 +16,10 @@ class Item extends Model
     {
         return $this->hasMany(RegistroHora::class);
     }
+
+    // Uso: Item::activos()->get()
+    public function scopeActivos($consulta)
+    {
+        return $consulta->where('activo', true);
+    }
 }
