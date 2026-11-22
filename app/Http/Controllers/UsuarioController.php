@@ -4,7 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ActualizarUsuarioRequest;
 use App\Http\Requests\CrearUsuarioRequest;
+use App\Models\Item;
+use App\Models\Responsable;
 use App\Models\Usuario;
+use App\Services\CalculadoraPago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -63,6 +66,53 @@ class UsuarioController extends Controller
         return redirect()->route('usuarios.index')->with('exito', 'Usuario creado correctamente.');
     }
 
+    // Detalle de un dependiente (activo o inactivo): sus registros con filtros y totales.
+    public function show(Request $request, Usuario $usuario, CalculadoraPago $calculadora)
+    {
+        // Los administradores no registran horas, así que no tienen detalle.
+        abort_unless($usuario->esDependiente(), 404);
+
+        $reglasHasta = ['nullable', 'date_format:Y-m-d'];
+        if ($request->filled('desde')) {
+            $reglasHasta[] = 'after_or_equal:desde';
+        }
+
+        $filtros = $request->validate([
+            'desde' => ['nullable', 'date_format:Y-m-d'],
+            'hasta' => $reglasHasta,
+            'estado' => ['nullable', 'in:pendientes,liquidados,todos'],
+        ], [
+            'hasta.after_or_equal' => 'La fecha final no puede ser anterior a la inicial.',
+        ]);
+
+        // Por defecto se ven todos los pendientes, sin importar la fecha.
+        $desde = $filtros['desde'] ?? null;
+        $hasta = $filtros['hasta'] ?? null;
+        $estado = $filtros['estado'] ?? 'pendientes';
+
+        $registros = $usuario->registros()
+            ->when($desde, fn ($consulta) => $consulta->whereDate('fecha', '>=', $desde))
+            ->when($hasta, fn ($consulta) => $consulta->whereDate('fecha', '<=', $hasta))
+            ->when($estado === 'pendientes', fn ($consulta) => $consulta->whereNull('liquidacion_id'))
+            ->when($estado === 'liquidados', fn ($consulta) => $consulta->whereNotNull('liquidacion_id'))
+            ->with(['responsable', 'item', 'usuario.valoresHora'])
+            ->orderBy('fecha')
+            ->orderBy('hora_inicio')
+            ->get();
+
+        $totales = $calculadora->totales($registros);
+
+        // Para el formulario de agregar registro.
+        $responsables = Responsable::activos()->orderByRaw("tipo = 'savio' desc")->orderBy('nombre')->get();
+        $items = Item::activos()->orderBy('nombre')->get();
+
+        $usuario->load('valoresHora');
+
+        return view('usuarios.show', compact(
+            'usuario', 'registros', 'totales', 'calculadora', 'responsables', 'items', 'desde', 'hasta', 'estado'
+        ));
+    }
+
     public function edit(Usuario $usuario)
     {
         $valoresHora = $usuario->valoresHora()->orderByDesc('vigente_desde')->get();
@@ -84,7 +134,18 @@ class UsuarioController extends Controller
             unset($datos['contrasena']);
         }
 
-        $usuario->update($datos);
+        // El valor de la hora no es un campo de usuarios: se guarda aparte, en el historial.
+        $valorHora = $datos['valor_hora'] ?? null;
+        $vigenteDesde = $datos['vigente_desde'] ?? null;
+        unset($datos['valor_hora'], $datos['vigente_desde']);
+
+        DB::transaction(function () use ($usuario, $datos, $valorHora, $vigenteDesde) {
+            $usuario->update($datos);
+
+            if ($usuario->esDependiente() && $valorHora && ! $usuario->valoresHora()->exists()) {
+                $usuario->valoresHora()->create(['valor' => $valorHora, 'vigente_desde' => $vigenteDesde]);
+            }
+        });
 
         return redirect()->route('usuarios.index')->with('exito', 'Usuario actualizado correctamente.');
     }

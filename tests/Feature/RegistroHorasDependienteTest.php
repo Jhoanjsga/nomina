@@ -27,6 +27,7 @@ class RegistroHorasDependienteTest extends TestCase
         $this->travelTo(Carbon::parse('2026-11-11 10:00'));
 
         $this->dependiente = $this->crearUsuario('dependiente', '2');
+        $this->dependiente->valoresHora()->create(['valor' => 10000, 'vigente_desde' => '2026-01-01']);
         $this->savio = Responsable::create(['nombre' => 'Savio', 'tipo' => 'savio', 'activo' => true]);
         $this->item = Item::create(['nombre' => 'Audiencia', 'activo' => true]);
     }
@@ -237,5 +238,31 @@ class RegistroHorasDependienteTest extends TestCase
                 'item_id' => $itemInactivo->id,
             ]))
             ->assertSessionHasErrors(['responsable_id', 'item_id']);
+    }
+
+    public function test_no_registra_antes_de_tener_valor_de_la_hora(): void
+    {
+        // Dependiente nuevo: su valor rige desde hoy (miércoles 11), así que ayer no tiene valor.
+        $nuevo = $this->crearUsuario('dependiente', '3');
+        $nuevo->valoresHora()->create(['valor' => 10000, 'vigente_desde' => '2026-11-11']);
+
+        $this->actingAs($nuevo)
+            ->post(route('mis-registros.store'), $this->datosValidos(['fecha' => '2026-11-10']))
+            ->assertSessionHasErrors(['fecha' => 'No se pueden registrar horas antes del 11/11/2026, fecha desde la que hay valor de la hora asignado.']);
+
+        $this->actingAs($nuevo)
+            ->post(route('mis-registros.store'), $this->datosValidos(['fecha' => '2026-11-11']))
+            ->assertSessionHasNoErrors();
+    }
+
+    public function test_no_registra_si_no_tiene_ningun_valor_de_la_hora(): void
+    {
+        $sinValor = $this->crearUsuario('dependiente', '4');
+
+        $this->actingAs($sinValor)
+            ->post(route('mis-registros.store'), $this->datosValidos())
+            ->assertSessionHasErrors('fecha');
+
+        $this->assertSame(0, RegistroHora::count());
     }
 }

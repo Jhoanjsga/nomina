@@ -149,6 +149,7 @@ class UsuariosTest extends TestCase
     {
         $admin = $this->administrador();
         $usuario = $this->crearUsuario();
+        $usuario->valoresHora()->create(['valor' => 9000, 'vigente_desde' => '2026-01-01']);
         $hashAnterior = $usuario->contrasena;
 
         $this->actingAs($admin)->put(route('usuarios.update', $usuario), [
@@ -260,5 +261,34 @@ class UsuariosTest extends TestCase
             'valor' => 8000,
             'vigente_desde' => '2026-12-01',
         ])->assertSessionHasErrors('valor');
+    }
+
+    public function test_al_pasar_de_administrador_a_dependiente_se_pide_el_valor_de_la_hora(): void
+    {
+        $admin = $this->administrador();
+        $otroAdmin = $this->administrador();
+
+        $datos = [
+            'nombre' => $otroAdmin->nombre,
+            'cedula' => $otroAdmin->cedula,
+            'correo' => $otroAdmin->correo,
+            'telefono' => $otroAdmin->telefono,
+            'rol' => 'dependiente',
+        ];
+
+        $this->actingAs($admin)->put(route('usuarios.update', $otroAdmin), $datos)
+            ->assertSessionHasErrors(['valor_hora', 'vigente_desde']);
+        $this->assertSame('administrador', $otroAdmin->fresh()->rol);
+
+        $this->actingAs($admin)->put(route('usuarios.update', $otroAdmin), [
+            ...$datos,
+            'valor_hora' => 10000,
+            'vigente_desde' => '2026-11-01',
+        ])->assertSessionHasNoErrors();
+
+        $otroAdmin->refresh();
+        $this->assertSame('dependiente', $otroAdmin->rol);
+        $this->assertCount(1, $otroAdmin->valoresHora);
+        $this->assertEquals(10000, $otroAdmin->valoresHora->first()->valor);
     }
 }

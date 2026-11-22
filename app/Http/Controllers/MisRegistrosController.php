@@ -6,14 +6,15 @@ use App\Http\Requests\GuardarRegistroHoraRequest;
 use App\Models\Item;
 use App\Models\RegistroHora;
 use App\Models\Responsable;
+use App\Services\CalculadoraPago;
 use App\Services\CalendarioLaboral;
+use Illuminate\Http\Request;
 
-// Pantalla "Mis horas activas" del dependiente.
-// Actividad 12: formulario para registrar horas.
-// Actividad 15 agregará la tabla de pendientes y los totales en esta misma pantalla.
+// Pantalla "Mis horas activas" del dependiente: formulario para registrar
+// y sus registros pendientes (aún no liquidados) con los totales.
 class MisRegistrosController extends Controller
 {
-    public function index(CalendarioLaboral $calendario)
+    public function index(Request $request, CalendarioLaboral $calendario, CalculadoraPago $calculadora)
     {
         // Fechas que puede elegir: día hábil anterior, hoy (si es hábil) y siguiente día hábil.
         // Se muestran como lista para evitar errores; el servidor las valida de todas formas.
@@ -23,7 +24,19 @@ class MisRegistrosController extends Controller
         $responsables = Responsable::activos()->orderByRaw("tipo = 'savio' desc")->orderBy('nombre')->get();
         $items = Item::activos()->orderBy('nombre')->get();
 
-        return view('mis-registros.index', compact('responsables', 'items', 'fechasPermitidas'));
+        $pendientes = $request->user()->registros()
+            ->whereNull('liquidacion_id')
+            ->with(['responsable', 'item', 'usuario.valoresHora'])
+            ->orderBy('fecha')
+            ->orderBy('hora_inicio')
+            ->get();
+
+        $totales = $calculadora->totales($pendientes);
+        $resumen = $calculadora->resumenPorResponsable($pendientes);
+
+        return view('mis-registros.index', compact(
+            'responsables', 'items', 'fechasPermitidas', 'pendientes', 'totales', 'resumen', 'calculadora'
+        ));
     }
 
     public function store(GuardarRegistroHoraRequest $request)

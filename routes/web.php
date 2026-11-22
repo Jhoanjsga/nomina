@@ -3,6 +3,8 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MisRegistrosController;
+use App\Http\Controllers\MisReportesController;
+use App\Http\Controllers\RegistroHoraController;
 use App\Http\Controllers\ResponsableController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\ValorHoraController;
@@ -19,12 +21,17 @@ Route::middleware(['auth', 'activo'])->group(function () {
     Route::post('/logout', [AuthController::class, 'cerrarSesion'])->name('logout');
 
     Route::middleware('rol:administrador')->prefix('admin')->group(function () {
-        // Gestión de usuarios: lista, crear, editar y eliminar.
+        // Gestión de usuarios: lista, crear, editar, eliminar y detalle (show).
         Route::resource('usuarios', UsuarioController::class)
-            ->except('show')
             ->parameters(['usuarios' => 'usuario']);
         Route::patch('/usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
         Route::post('/usuarios/{usuario}/valores-hora', [ValorHoraController::class, 'store'])->name('valores-hora.store');
+
+        // Registros de horas desde el detalle de usuario.
+        Route::post('/usuarios/{usuario}/registros', [RegistroHoraController::class, 'store'])->name('registros.store');
+        Route::resource('registros', RegistroHoraController::class)
+            ->only(['edit', 'update', 'destroy'])
+            ->parameters(['registros' => 'registro']);
 
         // Responsables e ítems: no se eliminan, se inactivan (por eso no hay destroy).
         Route::resource('responsables', ResponsableController::class)
@@ -42,6 +49,6 @@ Route::middleware(['auth', 'activo'])->group(function () {
     Route::middleware('rol:dependiente')->group(function () {
         Route::get('/mis-registros', [MisRegistrosController::class, 'index'])->name('mis-registros.index');
         Route::post('/mis-registros', [MisRegistrosController::class, 'store'])->name('mis-registros.store');
-        Route::view('/mis-reportes', 'proximamente', ['modulo' => 'Mis reportes'])->name('mis-reportes.index');
+        Route::get('/mis-reportes', [MisReportesController::class, 'index'])->name('mis-reportes.index');
     });
 });

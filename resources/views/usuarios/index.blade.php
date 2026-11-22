@@ -49,6 +49,9 @@
                                 @endif
                             </td>
                             <td class="text-end text-nowrap">
+                                @if ($usuario->esDependiente())
+                                    <a href="{{ route('usuarios.show', $usuario) }}" class="btn btn-sm btn-outline-secondary">Detalle</a>
+                                @endif
                                 <a href="{{ route('usuarios.edit', $usuario) }}" class="btn btn-sm btn-outline-primary">Editar</a>
 
                                 @unless ($usuario->is(auth()->user()))

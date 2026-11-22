@@ -25,7 +25,7 @@ class DatabaseSeeder extends Seeder
             'tipo' => 'savio',
             'activo' => true,
         ]);
-                Usuario::create([
+        $dependiente = Usuario::create([
             'nombre' => 'Dependiente de prueba',
             'cedula' => '2000000000',
             'correo' => 'dependiente@savio.test',
@@ -33,6 +33,12 @@ class DatabaseSeeder extends Seeder
             'contrasena' => 'Cambiar123*',
             'rol' => 'dependiente',
             'activo' => true,
+        ]);
+
+        // Todo dependiente necesita un valor de la hora para poder registrar.
+        $dependiente->valoresHora()->create([
+            'valor' => config('nomina.valor_hora_minimo'),
+            'vigente_desde' => '2026-01-01',
         ]);
     }
 }
