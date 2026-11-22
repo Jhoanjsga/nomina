@@ -160,6 +160,32 @@ class DetalleUsuarioTest extends TestCase
         $this->assertNotNull($registro->fresh());
     }
 
+    public function test_la_pagina_de_registros_ya_no_tiene_formulario_de_agregar(): void
+    {
+        $this->actingAs($this->admin)->get(route('usuarios.show', $this->dependiente))
+            ->assertOk()
+            ->assertDontSee('Agregar registro');
+    }
+
+    public function test_agregar_registro_muestra_el_formulario_y_vuelve_a_el_al_guardar(): void
+    {
+        $this->actingAs($this->admin)->get(route('registros.create', $this->dependiente))
+            ->assertOk()
+            ->assertSee('Agregar registro a Usuario 2');
+
+        $this->actingAs($this->admin)
+            ->post(route('registros.store', $this->dependiente), $this->datosRegistro())
+            ->assertRedirect(route('registros.create', $this->dependiente))
+            ->assertSessionHas('exito');
+
+        $this->assertSame(1, RegistroHora::count());
+    }
+
+    public function test_un_administrador_no_tiene_formulario_de_agregar_registro(): void
+    {
+        $this->actingAs($this->admin)->get(route('registros.create', $this->admin))->assertNotFound();
+    }
+
     public function test_el_administrador_registra_fuera_de_la_ventana_del_dependiente(): void
     {
         // Un mes atrás: el dependiente no podría, el administrador sí.

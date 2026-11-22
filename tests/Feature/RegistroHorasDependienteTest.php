@@ -64,7 +64,7 @@ class RegistroHorasDependienteTest extends TestCase
         Item::create(['nombre' => 'Item viejo', 'activo' => false]);
         Responsable::create(['nombre' => 'Dr. Retirado', 'tipo' => 'abogado', 'activo' => false]);
 
-        $this->actingAs($this->dependiente)->get(route('mis-registros.index'))
+        $this->actingAs($this->dependiente)->get(route('mis-registros.create'))
             ->assertOk()
             ->assertSee('Audiencia')
             // Hoy es miércoles 11: se ofrecen martes 10, miércoles 11 (hoy) y jueves 12.
@@ -79,7 +79,7 @@ class RegistroHorasDependienteTest extends TestCase
     {
         $admin = $this->crearUsuario('administrador', '1');
 
-        $this->actingAs($admin)->get(route('mis-registros.index'))->assertForbidden();
+        $this->actingAs($admin)->get(route('mis-registros.create'))->assertForbidden();
         $this->actingAs($admin)->post(route('mis-registros.store'), $this->datosValidos())->assertForbidden();
     }
 
@@ -93,7 +93,7 @@ class RegistroHorasDependienteTest extends TestCase
                 'usuario_id' => $otro->id,
                 'liquidacion_id' => 99,
             ]))
-            ->assertRedirect(route('mis-registros.index'))
+            ->assertRedirect(route('inicio'))
             ->assertSessionHasNoErrors();
 
         $registro = RegistroHora::first();

@@ -1,6 +1,6 @@
 @extends('layouts.app')
 
-@section('titulo', 'Detalle de '.$usuario->nombre)
+@section('titulo', 'Registros de '.$usuario->nombre)
 
 @section('contenido')
     @php($valorActual = $usuario->valorHoraActual())
@@ -23,7 +23,7 @@
         </div>
         <div class="text-nowrap">
             <a href="{{ route('usuarios.edit', $usuario) }}" class="btn btn-outline-primary">Editar usuario</a>
-            <a href="{{ route('usuarios.index') }}" class="btn btn-outline-secondary">Volver</a>
+            <a href="{{ route('inicio') }}" class="btn btn-outline-secondary">Volver</a>
         </div>
     </div>
 
@@ -60,23 +60,7 @@
         <strong>${{ number_format($totales['valor'], 0, ',', '.') }}</strong>
     </p>
 
-    <div class="card shadow-sm mb-4">
-        @include('parciales.tabla_registros', ['conEstado' => true, 'conAcciones' => true])
-    </div>
-
     <div class="card shadow-sm">
-        <div class="card-body">
-            <h2 class="h5 mb-3">Agregar registro</h2>
-            <p class="text-muted small">
-                Se puede registrar cualquier día hábil, también de una quincena ya pagada: quedará pendiente para la siguiente liquidación.
-            </p>
-
-            <form method="POST" action="{{ route('registros.store', $usuario) }}">
-                @csrf
-                @include('parciales.campos_registro', ['registro' => null, 'fechasPermitidas' => null])
-
-                <button type="submit" class="btn btn-primary mt-3">Agregar</button>
-            </form>
-        </div>
+        @include('parciales.tabla_registros', ['conEstado' => true, 'conAcciones' => true])
     </div>
 @endsection

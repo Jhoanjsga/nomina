@@ -136,6 +136,21 @@ class UsuariosTest extends TestCase
         $this->assertCount(0, $nuevo->valoresHora);
     }
 
+    public function test_los_errores_de_validacion_salen_en_espanol(): void
+    {
+        $this->actingAs($this->administrador())
+            ->post(route('usuarios.store'), [])
+            ->assertSessionHasErrors([
+                'nombre' => 'El campo nombre es obligatorio.',
+                'cedula' => 'El campo cédula es obligatorio.',
+                'contrasena' => 'El campo contraseña es obligatorio.',
+            ]);
+
+        $this->actingAs($this->administrador())
+            ->post(route('usuarios.store'), $this->datosNuevoDependiente(['correo' => 'no-es-correo']))
+            ->assertSessionHasErrors(['correo' => 'El campo correo debe ser un correo electrónico válido.']);
+    }
+
     public function test_no_se_repite_cedula_ni_correo(): void
     {
         $admin = $this->administrador();

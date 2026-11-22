@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\InicioController;
 use App\Http\Controllers\ItemController;
 use App\Http\Controllers\MisRegistrosController;
 use App\Http\Controllers\MisReportesController;
@@ -17,17 +18,18 @@ Route::middleware('guest')->group(function () {
 
 // 'activo' saca al usuario si lo inactivaron mientras tenía la sesión abierta.
 Route::middleware(['auth', 'activo'])->group(function () {
-    Route::view('/', 'inicio')->name('inicio');
+    Route::get('/', [InicioController::class, 'index'])->name('inicio');
     Route::post('/logout', [AuthController::class, 'cerrarSesion'])->name('logout');
 
     Route::middleware('rol:administrador')->prefix('admin')->group(function () {
-        // Gestión de usuarios: lista, crear, editar, eliminar y detalle (show).
+        // Gestión de usuarios: lista, crear, editar, eliminar y registros del dependiente (show).
         Route::resource('usuarios', UsuarioController::class)
             ->parameters(['usuarios' => 'usuario']);
         Route::patch('/usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
         Route::post('/usuarios/{usuario}/valores-hora', [ValorHoraController::class, 'store'])->name('valores-hora.store');
 
-        // Registros de horas desde el detalle de usuario.
+        // Registros de horas que maneja el administrador.
+        Route::get('/usuarios/{usuario}/registros/create', [RegistroHoraController::class, 'create'])->name('registros.create');
         Route::post('/usuarios/{usuario}/registros', [RegistroHoraController::class, 'store'])->name('registros.store');
         Route::resource('registros', RegistroHoraController::class)
             ->only(['edit', 'update', 'destroy'])
@@ -47,7 +49,7 @@ Route::middleware(['auth', 'activo'])->group(function () {
     });
 
     Route::middleware('rol:dependiente')->group(function () {
-        Route::get('/mis-registros', [MisRegistrosController::class, 'index'])->name('mis-registros.index');
+        Route::get('/mis-registros', [MisRegistrosController::class, 'create'])->name('mis-registros.create');
         Route::post('/mis-registros', [MisRegistrosController::class, 'store'])->name('mis-registros.store');
         Route::get('/mis-reportes', [MisReportesController::class, 'index'])->name('mis-reportes.index');
     });

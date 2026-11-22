@@ -8,10 +8,20 @@ use App\Models\RegistroHora;
 use App\Models\Responsable;
 use App\Models\Usuario;
 
-// Registros de horas que maneja el administrador desde el detalle de usuario.
+// Registros de horas que maneja el administrador.
 // Puede crear en cualquier día hábil, pero solo edita o elimina registros pendientes.
 class RegistroHoraController extends Controller
 {
+    public function create(Usuario $usuario)
+    {
+        abort_unless($usuario->esDependiente(), 404);
+
+        $responsables = Responsable::activos()->orderByRaw("tipo = 'savio' desc")->orderBy('nombre')->get();
+        $items = Item::activos()->orderBy('nombre')->get();
+
+        return view('registros.create', compact('usuario', 'responsables', 'items'));
+    }
+
     public function store(GuardarRegistroHoraRequest $request, Usuario $usuario)
     {
         abort_unless($usuario->esDependiente(), 404);
@@ -21,7 +31,8 @@ class RegistroHoraController extends Controller
             'usuario_id' => $usuario->id,
         ]);
 
-        return back()->with('exito', 'Registro agregado correctamente.');
+        // Vuelve al formulario vacío para poder agregar otro seguido.
+        return redirect()->route('registros.create', $usuario)->with('exito', 'Registro agregado correctamente.');
     }
 
     public function edit(RegistroHora $registro)

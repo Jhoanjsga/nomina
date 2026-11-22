@@ -73,7 +73,7 @@ class MisHorasTest extends TestCase
         ]);
     }
 
-    public function test_horas_activas_muestra_solo_pendientes_con_sus_totales(): void
+    public function test_el_inicio_muestra_solo_pendientes_con_sus_totales(): void
     {
         $this->crearRegistro($this->dependiente, '2026-11-10', '08:00', '10:00', ['radicado' => 'RAD-PENDIENTE']);
         $this->crearRegistro($this->dependiente, '2026-11-11', '14:00', '15:30', ['responsable_id' => $this->abogado->id]);
@@ -82,7 +82,7 @@ class MisHorasTest extends TestCase
             'liquidacion_id' => $this->liquidacion()->id,
         ]);
 
-        $respuesta = $this->actingAs($this->dependiente)->get(route('mis-registros.index'));
+        $respuesta = $this->actingAs($this->dependiente)->get(route('inicio'));
 
         $respuesta->assertOk()
             ->assertSee('RAD-PENDIENTE')
@@ -103,7 +103,7 @@ class MisHorasTest extends TestCase
         $otro->valoresHora()->create(['valor' => 10000, 'vigente_desde' => '2026-01-01']);
         $this->crearRegistro($otro, '2026-11-10', '08:00', '10:00', ['radicado' => 'RAD-AJENO']);
 
-        $this->actingAs($this->dependiente)->get(route('mis-registros.index'))
+        $this->actingAs($this->dependiente)->get(route('inicio'))
             ->assertOk()
             ->assertDontSee('RAD-AJENO')
             ->assertViewHas('totales', ['horas' => 0.0, 'valor' => 0.0]);
@@ -147,6 +147,42 @@ class MisHorasTest extends TestCase
             ->assertDontSee('RAD-FUERA');
     }
 
+    public function test_reportes_filtra_por_estado(): void
+    {
+        $this->crearRegistro($this->dependiente, '2026-11-03', '08:00', '10:00', [
+            'radicado' => 'RAD-LIQUIDADO',
+            'liquidacion_id' => $this->liquidacion()->id,
+        ]);
+        $this->crearRegistro($this->dependiente, '2026-11-10', '08:00', '09:00', ['radicado' => 'RAD-PENDIENTE']);
+
+        $this->actingAs($this->dependiente)->get(route('mis-reportes.index', ['estado' => 'pendientes']))
+            ->assertSee('RAD-PENDIENTE')
+            ->assertDontSee('RAD-LIQUIDADO')
+            ->assertViewHas('totales', ['horas' => 1.0, 'valor' => 10000.0]);
+
+        $this->actingAs($this->dependiente)->get(route('mis-reportes.index', ['estado' => 'liquidados']))
+            ->assertSee('RAD-LIQUIDADO')
+            ->assertDontSee('RAD-PENDIENTE')
+            ->assertViewHas('totales', ['horas' => 2.0, 'valor' => 20000.0]);
+    }
+
+    public function test_reportes_rechaza_un_estado_que_no_existe(): void
+    {
+        $this->actingAs($this->dependiente)
+            ->get(route('mis-reportes.index', ['estado' => 'borrados']))
+            ->assertSessionHasErrors('estado');
+    }
+
+    public function test_agregar_registro_solo_muestra_el_formulario(): void
+    {
+        $this->crearRegistro($this->dependiente, '2026-11-10', '08:00', '10:00', ['radicado' => 'RAD-PENDIENTE']);
+
+        $this->actingAs($this->dependiente)->get(route('mis-registros.create'))
+            ->assertOk()
+            ->assertSee('Registrar')
+            ->assertDontSee('RAD-PENDIENTE');
+    }
+
     public function test_reportes_rechaza_un_rango_invertido(): void
     {
         $this->actingAs($this->dependiente)
@@ -158,7 +194,7 @@ class MisHorasTest extends TestCase
     {
         $admin = $this->crearUsuario('administrador', '1');
 
-        $this->actingAs($admin)->get(route('mis-registros.index'))->assertForbidden();
+        $this->actingAs($admin)->get(route('mis-registros.create'))->assertForbidden();
         $this->actingAs($admin)->get(route('mis-reportes.index'))->assertForbidden();
     }
 }

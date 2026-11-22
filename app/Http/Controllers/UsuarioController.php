@@ -4,8 +4,6 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\ActualizarUsuarioRequest;
 use App\Http\Requests\CrearUsuarioRequest;
-use App\Models\Item;
-use App\Models\Responsable;
 use App\Models\Usuario;
 use App\Services\CalculadoraPago;
 use Illuminate\Http\Request;
@@ -66,7 +64,7 @@ class UsuarioController extends Controller
         return redirect()->route('usuarios.index')->with('exito', 'Usuario creado correctamente.');
     }
 
-    // Detalle de un dependiente (activo o inactivo): sus registros con filtros y totales.
+    // Registros de un dependiente (activo o inactivo) con filtros y totales. Se llega desde su tarjeta en Inicio.
     public function show(Request $request, Usuario $usuario, CalculadoraPago $calculadora)
     {
         // Los administradores no registran horas, así que no tienen detalle.
@@ -102,14 +100,10 @@ class UsuarioController extends Controller
 
         $totales = $calculadora->totales($registros);
 
-        // Para el formulario de agregar registro.
-        $responsables = Responsable::activos()->orderByRaw("tipo = 'savio' desc")->orderBy('nombre')->get();
-        $items = Item::activos()->orderBy('nombre')->get();
-
         $usuario->load('valoresHora');
 
         return view('usuarios.show', compact(
-            'usuario', 'registros', 'totales', 'calculadora', 'responsables', 'items', 'desde', 'hasta', 'estado'
+            'usuario', 'registros', 'totales', 'calculadora', 'desde', 'hasta', 'estado'
         ));
     }
 

@@ -27,7 +27,7 @@
                     <li class="nav-item"><a class="nav-link" href="{{ route('items.index') }}">Ítems</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('reportes.index') }}">Reportes</a></li>
                 @else
-                    <li class="nav-item"><a class="nav-link" href="{{ route('mis-registros.index') }}">Mis horas activas</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{{ route('mis-registros.create') }}">Agregar registro</a></li>
                     <li class="nav-item"><a class="nav-link" href="{{ route('mis-reportes.index') }}">Mis reportes</a></li>
                 @endif
             </ul>
