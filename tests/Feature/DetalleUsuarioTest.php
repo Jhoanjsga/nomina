@@ -123,6 +123,30 @@ class DetalleUsuarioTest extends TestCase
             ->assertDontSee('RAD-LIQUIDADO');
     }
 
+    public function test_exporta_a_excel_lo_que_esta_filtrado(): void
+    {
+        $this->crearRegistro('2026-11-03', '08:00', '09:30', ['radicado' => 'RAD-DIA-3', 'cliente' => 'Señora Peña']);
+        $this->crearRegistro('2026-11-10', '08:00', '09:00', ['radicado' => 'RAD-DIA-10']);
+        $this->registroLiquidado();
+
+        $respuesta = $this->actingAs($this->admin)
+            ->get(route('usuarios.exportar', [$this->dependiente, 'desde' => '2026-11-01', 'hasta' => '2026-11-05']));
+
+        $respuesta->assertOk()->assertDownload('registros-usuario-2.csv');
+
+        $contenido = $respuesta->streamedContent();
+        $this->assertStringContainsString('RAD-DIA-3', $contenido);
+        $this->assertStringContainsString('Señora Peña', $contenido);
+        $this->assertStringNotContainsString('RAD-DIA-10', $contenido);
+        $this->assertStringNotContainsString('RAD-LIQUIDADO', $contenido);
+        $this->assertStringContainsString('Total;;;;;;;;;1,50;15000,00', $contenido);
+    }
+
+    public function test_un_dependiente_no_puede_exportar(): void
+    {
+        $this->actingAs($this->dependiente)->get(route('usuarios.exportar', $this->dependiente))->assertForbidden();
+    }
+
     public function test_rechaza_un_rango_invertido(): void
     {
         $this->actingAs($this->admin)
@@ -283,10 +307,35 @@ class DetalleUsuarioTest extends TestCase
     {
         $registro = $this->crearRegistro('2026-11-10', '08:00', '10:00');
 
+        // Primero la página de confirmación, sin borrar nada todavía.
+        $this->actingAs($this->admin)->get(route('registros.eliminar', $registro))
+            ->assertOk()
+            ->assertSee($registro->radicado);
+        $this->assertNotNull($registro->fresh());
+
         $this->actingAs($this->admin)->delete(route('registros.destroy', $registro))
+            ->assertRedirect(route('usuarios.show', $this->dependiente))
             ->assertSessionHas('exito');
 
         $this->assertNull($registro->fresh());
+    }
+
+    public function test_un_registro_liquidado_no_tiene_pagina_de_eliminar(): void
+    {
+        $registro = $this->registroLiquidado();
+
+        $this->actingAs($this->admin)->get(route('registros.eliminar', $registro))
+            ->assertRedirect(route('usuarios.show', $this->dependiente))
+            ->assertSessionHas('error');
+    }
+
+    public function test_las_vistas_no_usan_javascript(): void
+    {
+        $this->crearRegistro('2026-11-10', '08:00', '10:00');
+
+        $this->actingAs($this->admin)->get(route('usuarios.show', $this->dependiente))
+            ->assertDontSee('confirm(', false)
+            ->assertDontSee('<script', false);
     }
 
     public function test_un_registro_liquidado_no_se_edita_ni_se_elimina(): void

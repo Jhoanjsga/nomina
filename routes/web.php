@@ -3,9 +3,11 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\InicioController;
 use App\Http\Controllers\ItemController;
+use App\Http\Controllers\LiquidacionController;
 use App\Http\Controllers\MisRegistrosController;
 use App\Http\Controllers\MisReportesController;
 use App\Http\Controllers\RegistroHoraController;
+use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\ResponsableController;
 use App\Http\Controllers\UsuarioController;
 use App\Http\Controllers\ValorHoraController;
@@ -25,15 +27,22 @@ Route::middleware(['auth', 'activo'])->group(function () {
         // Gestión de usuarios: lista, crear, editar, eliminar y registros del dependiente (show).
         Route::resource('usuarios', UsuarioController::class)
             ->parameters(['usuarios' => 'usuario']);
+        Route::get('/usuarios/{usuario}/exportar', [UsuarioController::class, 'exportar'])->name('usuarios.exportar');
+        Route::get('/usuarios/{usuario}/eliminar',[UsuarioController::class, 'confirmarEliminar'])->name('usuarios.eliminar');
         Route::patch('/usuarios/{usuario}/estado', [UsuarioController::class, 'cambiarEstado'])->name('usuarios.estado');
         Route::post('/usuarios/{usuario}/valores-hora', [ValorHoraController::class, 'store'])->name('valores-hora.store');
 
         // Registros de horas que maneja el administrador.
         Route::get('/usuarios/{usuario}/registros/create', [RegistroHoraController::class, 'create'])->name('registros.create');
         Route::post('/usuarios/{usuario}/registros', [RegistroHoraController::class, 'store'])->name('registros.store');
+        Route::get('/registros/{registro}/eliminar', [RegistroHoraController::class, 'confirmarEliminar'])->name('registros.eliminar');
         Route::resource('registros', RegistroHoraController::class)
             ->only(['edit', 'update', 'destroy'])
             ->parameters(['registros' => 'registro']);
+
+        // Liquidar: primero la página de confirmación (GET) y luego se guarda (POST).
+        Route::get('/usuarios/{usuario}/liquidar', [LiquidacionController::class, 'confirmar'])->name('liquidaciones.confirmar');
+        Route::post('/usuarios/{usuario}/liquidaciones', [LiquidacionController::class, 'store'])->name('liquidaciones.store');
 
         // Responsables e ítems: no se eliminan, se inactivan (por eso no hay destroy).
         Route::resource('responsables', ResponsableController::class)
@@ -45,7 +54,9 @@ Route::middleware(['auth', 'activo'])->group(function () {
             ->only(['index', 'store', 'edit', 'update'])
             ->parameters(['items' => 'item']);
         Route::patch('/items/{item}/estado', [ItemController::class, 'cambiarEstado'])->name('items.estado');
-        Route::view('/reportes', 'proximamente', ['modulo' => 'Reportes'])->name('reportes.index');
+        Route::get('/reportes', [ReporteController::class, 'index'])->name('reportes.index');
+        Route::get('/reportes/excel', [ReporteController::class, 'excel'])->name('reportes.excel');
+        Route::get('/reportes/imprimir', [ReporteController::class, 'imprimir'])->name('reportes.imprimir');
     });
 
     Route::middleware('rol:dependiente')->group(function () {

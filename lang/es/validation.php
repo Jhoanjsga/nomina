@@ -56,6 +56,7 @@ return [
         'hora_fin' => 'hora de fin',
         'responsable_id' => 'responsable',
         'item_id' => 'ítem',
+        'usuario_id' => 'dependiente',
         'radicado' => 'radicado',
         'cliente' => 'cliente',
         'observacion' => 'observación',

@@ -210,6 +210,10 @@ class UsuariosTest extends TestCase
         $usuario = $this->crearUsuario();
         $usuario->valoresHora()->create(['valor' => 9000, 'vigente_desde' => '2026-01-01']);
 
+        $this->actingAs($admin)->get(route('usuarios.eliminar', $usuario))
+            ->assertOk()
+            ->assertSee('¿Seguro que deseas eliminar este usuario?');
+
         $this->actingAs($admin)->delete(route('usuarios.destroy', $usuario))
             ->assertRedirect(route('usuarios.index'));
 
@@ -232,6 +236,13 @@ class UsuariosTest extends TestCase
             'radicado' => '2026-001',
             'cliente' => 'Cliente de prueba',
         ]);
+
+        // La página de eliminar avisa y ofrece inactivar en vez de eliminar.
+        $this->actingAs($admin)->get(route('usuarios.eliminar', $usuario))
+            ->assertOk()
+            ->assertSee('no se puede eliminar')
+            ->assertSee('Inactivar')
+            ->assertDontSee('¿Seguro que deseas eliminar este usuario?');
 
         $this->actingAs($admin)->delete(route('usuarios.destroy', $usuario))
             ->assertSessionHas('error');

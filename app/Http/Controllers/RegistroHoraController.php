@@ -7,6 +7,7 @@ use App\Models\Item;
 use App\Models\RegistroHora;
 use App\Models\Responsable;
 use App\Models\Usuario;
+use App\Services\CalculadoraPago;
 
 // Registros de horas que maneja el administrador.
 // Puede crear en cualquier día hábil, pero solo edita o elimina registros pendientes.
@@ -67,6 +68,18 @@ class RegistroHoraController extends Controller
         return redirect()->route('usuarios.show', $registro->usuario_id)->with('exito', 'Registro actualizado correctamente.');
     }
 
+    // Página para confirmar antes de eliminar (reemplaza el confirm() de JavaScript).
+    public function confirmarEliminar(RegistroHora $registro, CalculadoraPago $calculadora)
+    {
+        if ($registro->liquidacion_id) {
+            return $this->rechazarLiquidado($registro);
+        }
+
+        $registro->load(['usuario.valoresHora', 'responsable', 'item']);
+
+        return view('registros.eliminar', compact('registro', 'calculadora'));
+    }
+
     public function destroy(RegistroHora $registro)
     {
         if ($registro->liquidacion_id) {
@@ -75,7 +88,7 @@ class RegistroHoraController extends Controller
 
         $registro->delete();
 
-        return back()->with('exito', 'Registro eliminado.');
+        return redirect()->route('usuarios.show', $registro->usuario_id)->with('exito', 'Registro eliminado.');
     }
 
     // Un registro liquidado ya se pagó: no se puede cambiar ni borrar.

@@ -63,12 +63,7 @@
                                         </button>
                                     </form>
 
-                                    <form method="POST" action="{{ route('usuarios.destroy', $usuario) }}" class="d-inline"
-                                          onsubmit="return confirm('¿Eliminar este usuario? Esta acción no se puede deshacer.');">
-                                        @csrf
-                                        @method('DELETE')
-                                        <button type="submit" class="btn btn-sm btn-outline-danger">Eliminar</button>
-                                    </form>
+                                    <a href="{{ route('usuarios.eliminar', $usuario) }}" class="btn btn-sm btn-outline-danger">Eliminar</a>
                                 @endunless
                             </td>
                         </tr>

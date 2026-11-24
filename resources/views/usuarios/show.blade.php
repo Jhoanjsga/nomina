@@ -54,11 +54,25 @@
         </div>
     </form>
 
-    <p class="mb-3">
-        {{ $registros->count() }} {{ $registros->count() === 1 ? 'registro' : 'registros' }}:
-        <strong>{{ number_format($totales['horas'], 2, ',', '.') }} horas</strong>,
-        <strong>${{ number_format($totales['valor'], 0, ',', '.') }}</strong>
-    </p>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <p class="mb-0">
+            {{ $registros->count() }} {{ $registros->count() === 1 ? 'registro' : 'registros' }}:
+            <strong>{{ number_format($totales['horas'], 2, ',', '.') }} horas</strong>,
+            <strong>${{ number_format($totales['valor'], 0, ',', '.') }}</strong>
+        </p>
+        <div class="text-nowrap">
+            @if ($registros->isNotEmpty())
+                <a href="{{ route('usuarios.exportar', [$usuario, 'desde' => $desde, 'hasta' => $hasta, 'estado' => $estado]) }}"
+                   class="btn btn-outline-success">Exportar a Excel</a>
+            @endif
+            @if ($puedeLiquidar)
+                <a href="{{ route('liquidaciones.confirmar', [$usuario, 'desde' => $desde, 'hasta' => $hasta]) }}"
+                   class="btn btn-danger">Liquidar pendientes del rango</a>
+            @elseif (! $desde || ! $hasta)
+                <span class="text-muted small">Para liquidar, filtra un rango de fechas (desde y hasta).</span>
+            @endif
+        </div>
+    </div>
 
     <div class="card shadow-sm">
         @include('parciales.tabla_registros', ['conEstado' => true, 'conAcciones' => true])

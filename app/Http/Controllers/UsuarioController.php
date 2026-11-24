@@ -8,6 +8,7 @@ use App\Models\Usuario;
 use App\Services\CalculadoraPago;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class UsuarioController extends Controller
 {
@@ -70,6 +71,69 @@ class UsuarioController extends Controller
         // Los administradores no registran horas, así que no tienen detalle.
         abort_unless($usuario->esDependiente(), 404);
 
+        [$registros, $desde, $hasta, $estado] = $this->registrosFiltrados($request, $usuario);
+
+        $totales = $calculadora->totales($registros);
+
+        // El botón Liquidar solo aparece con un rango completo que tenga pendientes.
+        $puedeLiquidar = $desde && $hasta && $usuario->registros()
+            ->whereNull('liquidacion_id')
+            ->whereDate('fecha', '>=', $desde)
+            ->whereDate('fecha', '<=', $hasta)
+            ->exists();
+
+        $usuario->load('valoresHora');
+
+        return view('usuarios.show', compact(
+            'usuario', 'registros', 'totales', 'calculadora', 'desde', 'hasta', 'estado', 'puedeLiquidar'
+        ));
+    }
+
+    // Descarga en CSV (se abre en Excel) lo mismo que se ve filtrado en show.
+    public function exportar(Request $request, Usuario $usuario, CalculadoraPago $calculadora)
+    {
+        abort_unless($usuario->esDependiente(), 404);
+
+        [$registros] = $this->registrosFiltrados($request, $usuario);
+        $totales = $calculadora->totales($registros);
+
+        $nombreArchivo = 'registros-'.Str::slug($usuario->nombre).'.csv';
+
+        return response()->streamDownload(function () use ($registros, $totales, $calculadora) {
+            $archivo = fopen('php://output', 'w');
+
+            // BOM para que Excel lea bien las tildes. Excel en español separa con punto y coma.
+            fwrite($archivo, "\xEF\xBB\xBF");
+            fputcsv($archivo, ['Fecha', 'Hora inicio', 'Hora fin', 'Responsable', 'Ítem', 'Radicado', 'Cliente', 'Observación', 'Estado', 'Horas', 'Valor'], ';');
+
+            foreach ($registros as $registro) {
+                fputcsv($archivo, [
+                    $registro->fecha->format('d/m/Y'),
+                    substr($registro->hora_inicio, 0, 5),
+                    substr($registro->hora_fin, 0, 5),
+                    $registro->responsable->nombre,
+                    $registro->item->nombre,
+                    $registro->radicado,
+                    $registro->cliente,
+                    $registro->observacion,
+                    $registro->liquidacion_id ? 'Liquidado' : 'Pendiente',
+                    number_format($calculadora->horas($registro), 2, ',', ''),
+                    number_format($calculadora->valor($registro), 2, ',', ''),
+                ], ';');
+            }
+
+            fputcsv($archivo, ['Total', '', '', '', '', '', '', '', '',
+                number_format($totales['horas'], 2, ',', ''),
+                number_format($totales['valor'], 2, ',', ''),
+            ], ';');
+
+            fclose($archivo);
+        }, $nombreArchivo, ['Content-Type' => 'text/csv; charset=UTF-8']);
+    }
+
+    // Filtros de la página de registros: rango de fechas (opcional) y estado (pendientes por defecto).
+    private function registrosFiltrados(Request $request, Usuario $usuario): array
+    {
         $reglasHasta = ['nullable', 'date_format:Y-m-d'];
         if ($request->filled('desde')) {
             $reglasHasta[] = 'after_or_equal:desde';
@@ -83,7 +147,6 @@ class UsuarioController extends Controller
             'hasta.after_or_equal' => 'La fecha final no puede ser anterior a la inicial.',
         ]);
 
-        // Por defecto se ven todos los pendientes, sin importar la fecha.
         $desde = $filtros['desde'] ?? null;
         $hasta = $filtros['hasta'] ?? null;
         $estado = $filtros['estado'] ?? 'pendientes';
@@ -98,13 +161,7 @@ class UsuarioController extends Controller
             ->orderBy('hora_inicio')
             ->get();
 
-        $totales = $calculadora->totales($registros);
-
-        $usuario->load('valoresHora');
-
-        return view('usuarios.show', compact(
-            'usuario', 'registros', 'totales', 'calculadora', 'desde', 'hasta', 'estado'
-        ));
+        return [$registros, $desde, $hasta, $estado];
     }
 
     public function edit(Usuario $usuario)
@@ -157,15 +214,29 @@ class UsuarioController extends Controller
         return back()->with('exito', $mensaje);
     }
 
+    // Página para confirmar antes de eliminar (reemplaza el confirm() de JavaScript).
+    public function confirmarEliminar(Request $request, Usuario $usuario)
+    {
+        if ($usuario->is($request->user())) {
+            return redirect()->route('usuarios.index')->with('error', 'No puedes eliminar tu propio usuario.');
+        }
+
+        // Si tiene registros o liquidaciones, la página lo avisa y ofrece inactivarlo.
+        $tieneMovimientos = $usuario->registros()->exists() || $usuario->liquidaciones()->exists();
+
+        return view('usuarios.eliminar', compact('usuario', 'tieneMovimientos'));
+    }
+
     public function destroy(Request $request, Usuario $usuario)
     {
         if ($usuario->is($request->user())) {
-            return back()->with('error', 'No puedes eliminar tu propio usuario.');
+            return redirect()->route('usuarios.index')->with('error', 'No puedes eliminar tu propio usuario.');
         }
 
         // Regla de negocio: con registros o liquidaciones no se elimina, se inactiva.
         if ($usuario->registros()->exists() || $usuario->liquidaciones()->exists()) {
-            return back()->with('error', 'El usuario tiene registros o liquidaciones. No se puede eliminar; inactívalo.');
+            return redirect()->route('usuarios.index')
+                ->with('error', 'El usuario tiene registros o liquidaciones. No se puede eliminar; inactívalo.');
         }
 
         // Su historial de valores de la hora se borra con él (no tiene registros que dependan de esos valores).
